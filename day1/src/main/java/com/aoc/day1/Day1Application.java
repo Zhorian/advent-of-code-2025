@@ -20,7 +20,7 @@ public class Day1Application implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) {
+    public void run(String... args) throws Exception {
         try (InputStream is = Day1Application.class.getResourceAsStream("/input");
              Scanner scanner = new Scanner(is, StandardCharsets.UTF_8)) {
             int landedOnZero = 0;
@@ -38,10 +38,11 @@ public class Day1Application implements CommandLineRunner {
                 int moves = Integer.parseInt(lineVal.substring(1));
                 char direction = lineVal.charAt(0);
 
-                DialResult dialResult = direction == 'L' ? dialLeft(currentPosition, moves) : dialRight(currentPosition, moves);
+                Dialer dialer = new Dialer(currentPosition, direction, moves);
+                dialer.dial();
 
-                currentPosition = dialResult.newPosition;
-                rotatedOverZero = rotatedOverZero + dialResult.clickedOverZero + dialResult.fullRotations;
+                currentPosition = dialer.newPosition;
+                rotatedOverZero = rotatedOverZero + dialer.clickedOverZero + dialer.fullRotations;
 
                 if(currentPosition == 0) {
                     landedOnZero++;
@@ -54,66 +55,78 @@ public class Day1Application implements CommandLineRunner {
         }
     }
 
-    private static DialResult dialRight(int initialPosition, int moves) {
-        int fullRotations = moves / DIAL_NUMBER_OF_POSITIONS;
-        int turnsWithoutFullRotations = moves % DIAL_NUMBER_OF_POSITIONS;
+    private static class Dialer {
+        final int initialPosition;
+        final char direction;
+        final int moves;
 
-        int newPosition = initialPosition + turnsWithoutFullRotations;
-        int clickedOverZero = 0;
-
-        if(newPosition > DIAL_MAX) {
-            newPosition = newPosition - DIAL_MAX - 1;
-        }
-
-        if(initialPosition != 0 && newPosition != 0 && newPosition < initialPosition) {
-            clickedOverZero++;
-        }
-
-        DialResult dialResult = new DialResult(newPosition, clickedOverZero, fullRotations);
-        logMove(initialPosition, "R", moves, dialResult.newPosition, dialResult.clickedOverZero, fullRotations);
-
-        return dialResult;
-    }
-
-    private static DialResult dialLeft(int initialPosition, int moves) {
-        int fullRotations = moves / DIAL_NUMBER_OF_POSITIONS;
-        int turnsWithoutFullRotations = moves % DIAL_NUMBER_OF_POSITIONS;
-
-        int newPosition = initialPosition - turnsWithoutFullRotations;
-        int clickedOverZero = 0;
-
-        if(newPosition < DIAL_MIN) {
-            newPosition = newPosition + DIAL_MAX + 1;
-        }
-
-        if(initialPosition != 0 && newPosition != 0 && newPosition > initialPosition) {
-            clickedOverZero++;
-        }
-
-        DialResult dialResult = new DialResult(newPosition, clickedOverZero, fullRotations);
-        logMove(initialPosition, "L", moves, dialResult.newPosition, dialResult.clickedOverZero, fullRotations);
-        
-        return dialResult;
-    }
-
-    private static void logMove(int initialPosition, String direction, int moves, int newPostion, int clickedOverZero, int fullRotations) {
-        System.out.println("The dial started at position " + initialPosition);
-        System.out.println("The dial is rotated " + direction + " " + moves);
-        System.out.println("The dial is pointing at " + newPostion);
-        System.out.println("The dial clicked over zero " + clickedOverZero + " time(s)");
-        System.out.println("The dial fully rotated " + fullRotations + " time(s)");
-        System.out.println("***END OF MOVE***");
-    }
-
-    private static class DialResult {
-        int newPosition;
-        int clickedOverZero;
         int fullRotations;
+        int turnsWithoutFullRotations;
+        int clickedOverZero;
+        int newPosition;
 
-        DialResult(int newPosition, int clickedOverZero, int fullRotations) {
-            this.newPosition = newPosition;
-            this.clickedOverZero = clickedOverZero;
-            this.fullRotations = fullRotations;
+        Dialer(int initialPosition, char direction, int moves) {
+            this.initialPosition = initialPosition;
+            this.direction = direction;
+            this.moves = moves;
+        }
+
+        public void dial() throws Exception {
+            this.fullRotations = moves / DIAL_NUMBER_OF_POSITIONS;
+            this.turnsWithoutFullRotations = moves % DIAL_NUMBER_OF_POSITIONS;
+            this.clickedOverZero = 0;
+
+            switch (direction) {
+                case 'L':
+                    this.dialLeft();
+                    break;
+                case 'R':
+                    this.dialRight();
+                    break;
+                default:
+                    throw new Exception("Unknown direction");
+            }
+
+            logMove();
+        }
+
+        private void dialLeft() {
+            this.newPosition = initialPosition - turnsWithoutFullRotations;
+
+            if(this.newPosition < DIAL_MIN) {
+                this.newPosition = this.newPosition + DIAL_MAX + 1;
+            }
+
+            if(this.initialPosition != 0 
+                && this.newPosition != 0 
+                && this.newPosition > this.initialPosition) {
+                
+                this.clickedOverZero++;
+            }
+        }
+
+        private void dialRight() {
+            this.newPosition = initialPosition + turnsWithoutFullRotations;
+
+            if(this.newPosition > DIAL_MAX) {
+                this.newPosition = this.newPosition - DIAL_MAX - 1;
+            }
+
+            if(this.initialPosition != 0 
+                && this.newPosition != 0
+                && this.newPosition < this.initialPosition) {
+                
+                this.clickedOverZero++;
+            }
+        }
+
+        private void logMove() {
+            System.out.println("The dial started at position " + this.initialPosition);
+            System.out.println("The dial is rotated " + this.direction + " " + this.moves);
+            System.out.println("The dial is pointing at " + this.newPosition);
+            System.out.println("The dial clicked over zero " + this.clickedOverZero + " time(s)");
+            System.out.println("The dial fully rotated " + this.fullRotations + " time(s)");
+            System.out.println("***END OF MOVE***");
         }
     }
 }
